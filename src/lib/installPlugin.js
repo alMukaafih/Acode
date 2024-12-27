@@ -65,9 +65,22 @@ export default async function installPlugin(id, name, purchaseToken) {
 				await zip.files["plugin.json"].async("text"),
 			);
 
-			if (!zip.files[pluginJson.main] && zip.files["main.js"]) {
+			/** patch main in manifest */
+			if (!zip.files[pluginJson.main]) {
 				pluginJson.main = "main.js";
-			} else if (!zip.files[pluginJson.main] && !zip.files["main.js"]) {
+			}
+
+			/** patch icon in manifest */
+			if (!zip.files[pluginJson.icon]) {
+				pluginJson.icon = "icon.png";
+			}
+
+			/** patch readme in manifest */
+			if (!zip.files[pluginJson.readme]) {
+				pluginJson.readme = "readme.md";
+			}
+
+			if (!zip.files[pluginJson.main]) {
 				throw new Error(strings["invalid plugin"]);
 			}
 
