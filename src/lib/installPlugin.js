@@ -103,7 +103,7 @@ export default async function installPlugin(
 
 			if (!zip.files[pluginJson.main]) {
 				throw new Error(strings["invalid plugin"]);
-      }
+			}
 
 			if (!isDependency && pluginJson.dependencies) {
 				const manifests = await resolveDepsManifest(pluginJson.dependencies);
