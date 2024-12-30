@@ -12,8 +12,17 @@ export default async function loadPlugin(pluginId, justInstalled = false) {
 		Url.join(PLUGIN_DIR, pluginId, "plugin.json"),
 	).readFile("json");
 
+	let mainUrl;
+	if (
+		await fsOperation(Url.join(PLUGIN_DIR, pluginId, pluginJson.main)).exists()
+	) {
+		mainUrl = Url.join(baseUrl, pluginJson.main);
+	} else {
+		mainUrl = Url.join(baseUrl, "main.js");
+	}
+
 	return new Promise((resolve, reject) => {
-		const $script = <script src={Url.join(baseUrl, pluginJson.main)}></script>;
+		const $script = <script src={mainUrl}></script>;
 
 		$script.onerror = (error) => {
 			reject(
