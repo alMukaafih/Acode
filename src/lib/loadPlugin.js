@@ -12,19 +12,8 @@ export default async function loadPlugin(pluginId, justInstalled = false) {
 		Url.join(PLUGIN_DIR, pluginId, "plugin.json"),
 	).readFile("json");
 
-	let mainUrl;
-	if (
-		await fsOperation(Url.join(PLUGIN_DIR, pluginId, pluginJson.main)).exists()
-	) {
-		mainUrl = Url.join(baseUrl, pluginJson.main);
-	} else {
-		mainUrl = Url.join(baseUrl, "main.js");
-	}
-
 	return new Promise((resolve, reject) => {
-		const $script = <script src={mainUrl}></script>;
-
-		$script.onerror = (error) => {
+		const onerror = (error) => {
 			reject(
 				new Error(
 					`Failed to load script for plugin ${pluginId}: ${error.message || error}`,
@@ -32,7 +21,7 @@ export default async function loadPlugin(pluginId, justInstalled = false) {
 			);
 		};
 
-		$script.onload = async () => {
+		const onload = async () => {
 			const $page = Page("Plugin");
 			$page.show = () => {
 				actionStack.push({
@@ -64,6 +53,17 @@ export default async function loadPlugin(pluginId, justInstalled = false) {
 			}
 		};
 
-		document.head.append($script);
+		const $script = <script src={Url.join(baseUrl, pluginJson.main)}></script>;
+		$script.onload = onload;
+		$script.onerror = onerror;
+
+		try {
+			document.head.append($script);
+		} catch (_) {
+			const $script = <script src={Url.join(baseUrl, "main.js")}></script>;
+			$script.onload = onload;
+			$script.onerror = onerror;
+			document.head.append($script);
+		}
 	});
 }
