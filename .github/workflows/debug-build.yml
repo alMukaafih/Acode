@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - build
+  pull_request:
+    branches:
+      - build
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Install deprndencies
+        run: npm install
+
+      - name: Setup Acode
+        run: npm run setup
+
+      - name: Build APK
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+              GITHUB_SHA="${{ github.event.pull_request.head.sha }}" # Do not use last merge commit set in GITHUB_SHA
+          fi
+          CURRENT_VERSION_NAME="$(jq ".version" package.json | sed 's/"//g')"
+          RELEASE_VERSION_NAME="v$CURRENT_VERSION_NAME+${GITHUB_SHA:0:7}" # The "+" is necessary so that versioning precedence is not affected
+          if ! printf "%s" "${RELEASE_VERSION_NAME/v/}" | grep -qP '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'; then
+              exit_on_error "The versionName '${RELEASE_VERSION_NAME/v/}' is not a valid version as per semantic version '2.0.0' spec in the format 'major.minor.patch(-prerelease)(+buildmetadata)'. https://semver.org/spec/v2.0.0.html."
+          fi
+
+          APK_DIR_PATH="./platforms/android/app/build/outputs/apk/debug"
+          APK_VERSION_TAG="$RELEASE_VERSION_NAME-github-debug" # Note the "-", GITHUB_SHA will already have "+" before it
+          APK_BASENAME_PREFIX="acode_$APK_VERSION_TAG"
+          # Used by attachment steps later
+          echo "APK_DIR_PATH=$APK_DIR_PATH" >> $GITHUB_ENV
+          echo "APK_VERSION_TAG=$APK_VERSION_TAG" >> $GITHUB_ENV
+          echo "APK_BASENAME_PREFIX=$APK_BASENAME_PREFIX" >> $GITHUB_ENV
+
+          node ./utils/config.js d paid
+          npx webpack --progress --mode production
+          node ./utils/loadStyles.js
+          npx cordova build android
+          exit_on_error "Build failed for '$APK_VERSION_TAG' build."
+
+          echo "Generating sha25sums file"
+            if ! (cd "$APK_DIR_PATH"; sha256sum \
+              "${APK_BASENAME_PREFIX}.apk"
+            > "${APK_BASENAME_PREFIX}_sha256sums"); then
+          exit_on_error "Generate sha25sums failed for '$APK_VERSION_TAG' release."
+
+      - name: Attach APK file
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_BASENAME_PREFIX }}
+          path: |
+            ${{ env.APK_DIR_PATH }}/app-debug.apk
+            ${{ env.APK_DIR_PATH }}/output-metadata.json
+
+      - name: Attach sha256sums file
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
+          path: |
+            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_sha256sums
+            ${{ env.APK_DIR_PATH }}/output-metadata.json
