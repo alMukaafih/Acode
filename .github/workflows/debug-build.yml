@@ -24,6 +24,8 @@ jobs:
       - name: Build APK
         shell: bash
         run: |
+          exit_on_error() { echo "$1"; exit 1; }
+
           if [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
               GITHUB_SHA="${{ github.event.pull_request.head.sha }}" # Do not use last merge commit set in GITHUB_SHA
           fi
@@ -45,26 +47,27 @@ jobs:
           npx webpack --progress --mode production
           node ./utils/loadStyles.js
           npx cordova build android
-          exit_on_error "Build failed for '$APK_VERSION_TAG' build."
 
-          echo "Generating sha25sums file"
-            if ! (cd "$APK_DIR_PATH"; sha256sum \
-              "${APK_BASENAME_PREFIX}.apk"
-            > "${APK_BASENAME_PREFIX}_sha256sums"); then
-          exit_on_error "Generate sha25sums failed for '$APK_VERSION_TAG' release."
+          cp "$APK_DIR_PATH/app-debug.apk" "$APK_DIR_PATH/${APK_BASENAME_PREFIX}.apk"
+
+          # echo "Generating sha25sums file"
+          #   if ! (cd "$APK_DIR_PATH"; sha256sum \
+          #     "${APK_BASENAME_PREFIX}.apk"
+          #   > "${APK_BASENAME_PREFIX}_sha256sums"); then
+          # exit_on_error "Generate sha25sums failed for '$APK_VERSION_TAG' release."
 
       - name: Attach APK file
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APK_BASENAME_PREFIX }}
           path: |
-            ${{ env.APK_DIR_PATH }}/app-debug.apk
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
+            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}.apk
+      # ${{ env.APK_DIR_PATH }}/output-metadata.json
 
-      - name: Attach sha256sums file
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
-          path: |
-            ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_sha256sums
-            ${{ env.APK_DIR_PATH }}/output-metadata.json
+      # - name: Attach sha256sums file
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ env.APK_BASENAME_PREFIX }}_sha256sums
+      #     path: |
+      #       ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_sha256sums
+      #       ${{ env.APK_DIR_PATH }}/output-metadata.json
