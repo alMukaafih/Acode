@@ -288,14 +288,14 @@ export default function otherSettings() {
 				}
 				break;
 
-			case "excludeFolders":
+			case "excludeFiles":
 				value = value
 					.split("\n")
 					.map((item) => item.trim())
 					.filter((item) => item.length > 0);
 				break;
 
-			case "explorerExludeFiles":
+			case "searchExclude":
 				value = value
 					.split("\n")
 					.map((item) => item.trim())
