@@ -140,12 +140,6 @@ files.off = function (event, callback) {
 };
 
 /**
- * Are we doing a search?
- * @type {boolean}
- */
-files.search;
-
-/**
  * Get directory tree
  * @param {Tree[]} treeList list of tree
  * @param {string} dir path to find
@@ -180,6 +174,18 @@ function getFile(path, tree) {
 	const len = children.length;
 	for (let i = 0; i < len; i++) {
 		const item = children[i];
+
+		if (files.search) {
+			const ignores = [
+				...settings.value.excludeFiles,
+				...settings.value.searchExclude,
+			];
+			const ignore = !!ignores.find((folder) =>
+				minimatch(item.path, folder, { matchBase: true }),
+			);
+			if (ignore) return;
+		}
+
 		const result = getFile(path, item);
 		if (result) return result;
 	}
@@ -305,15 +311,6 @@ async function createChildTree(parent, item, root) {
 
 	const file = await Tree.create(url, name, isDirectory);
 	if (!root.isConnected) return;
-
-	const ignores = files.search
-		? [...settings.value.excludeFiles, ...settings.value.searchExclude]
-		: settings.value.excludeFiles;
-
-	const ignore = !!ignores.find((folder) =>
-		minimatch(file.path, folder, { matchBase: true }),
-	);
-	if (ignore) return;
 
 	const existingTree = getTree(Object.values(filesTree), file.url);
 

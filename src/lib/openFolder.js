@@ -18,6 +18,8 @@ import * as FileList from "./fileList";
 import openFile from "./openFile";
 import recents from "./recents";
 import appSettings from "./settings";
+import { minimatch } from "minimatch";
+import settings from "./settings";
 
 /**
  * @typedef {import('../components/collapsableList').Collapsible} Collapsible
@@ -186,6 +188,12 @@ async function expandList($list) {
 			.sortDir(entries, {
 				sortByName: true,
 				showHiddenFiles: true,
+			})
+			.filter((entry) => {
+				const ignore = !!settings.value.excludeFiles.find((folder) =>
+					minimatch(entry.url, folder, { matchBase: true }),
+				);
+				return !ignore;
 			})
 			.map((entry) => {
 				const name = entry.name || Path.basename(entry.url);

@@ -171,7 +171,6 @@ class Settings {
 			quicktoolsItems: [...Array(this.#QUICKTOOLS_SIZE).keys()],
 			excludeFiles: this.#excludeFiles,
 			searchExclude: this.#searchExclude,
-			excludeGitIgnore: false,
 			defaultFileEncoding: "UTF-8",
 			inlineAutoCompletion: true,
 			colorPreview: true,
